@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Motion → Music</title>
+    <style>
+      body { margin: 0; background: #0b0b10; color: #eee; font-family: sans-serif; display: grid; place-items: center; height: 100vh; }
+      #stage { position: relative; width: 640px; height: 480px; }
+      #stage video, #stage canvas { position: absolute; inset: 0; width: 640px; height: 480px; transform: scaleX(-1); }
+      #controls { display: flex; gap: 12px; justify-content: center; margin-top: 16px; }
+      button { font-size: 16px; padding: 10px 18px; border-radius: 8px; border: 0; cursor: pointer; }
+      button:disabled { opacity: 0.4; cursor: default; }
+    </style>
+  </head>
+  <body>
+    <div>
+      <div id="stage">
+        <video id="video" playsinline muted></video>
+        <canvas id="overlay" width="640" height="480"></canvas>
+      </div>
+      <div id="controls">
+        <button id="rec">● REC</button>
+        <button id="play" disabled>▶ PLAY</button>
+        <button id="redo" disabled>↻ REDO</button>
+      </div>
+      <p id="status">loading models…</p>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

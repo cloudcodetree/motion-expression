@@ -1,0 +1,34 @@
+import { describe, it, expect } from 'vitest';
+import { detectImpacts } from '../../src/features/kinetic';
+import type { SensedFrame, Landmark } from '../../src/types';
+
+// Build a frame with all 33 landmarks at center, overriding specific indices.
+function frame(t: number, overrides: Record<number, { x: number; y: number }> = {}): SensedFrame {
+  const poseLandmarks: Landmark[] = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
+  for (const [i, p] of Object.entries(overrides)) poseLandmarks[+i] = { x: p.x, y: p.y, z: 0 };
+  return { t, poseLandmarks, faceBlendshapes: [] };
+}
+
+describe('detectImpacts', () => {
+  it('detects a foot slam: fast downward motion then a sudden stop', () => {
+    // index 27 = left ankle. y grows = moving down the screen.
+    const frames = [
+      frame(0,   { 27: { x: 0.5, y: 0.20 } }),
+      frame(33,  { 27: { x: 0.5, y: 0.30 } }), // speed 0.10
+      frame(66,  { 27: { x: 0.5, y: 0.45 } }), // speed 0.15
+      frame(99,  { 27: { x: 0.5, y: 0.60 } }), // speed 0.15 (peak)
+      frame(132, { 27: { x: 0.5, y: 0.60 } }), // speed 0.00 -> contact
+      frame(165, { 27: { x: 0.5, y: 0.60 } }),
+    ];
+    const impacts = detectImpacts(frames);
+    expect(impacts.length).toBe(1);
+    expect(impacts[0].impact.bodyPart).toBe('leftFoot');
+    expect(impacts[0].frameIndex).toBe(4);
+    expect(impacts[0].impact.force).toBeGreaterThan(0.8);
+  });
+
+  it('produces no impacts for a still body', () => {
+    const frames = [frame(0), frame(33), frame(66), frame(99)];
+    expect(detectImpacts(frames)).toEqual([]);
+  });
+});
