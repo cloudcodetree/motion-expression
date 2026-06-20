@@ -4,6 +4,20 @@
 **Status:** Approved design (seed / PoC stage)
 **Author:** Chris Harper + Claude
 
+## North star (the why)
+
+*Imagine you are a child that wishes they had the power of a god and could make
+people feel like they do.*
+
+This is the emotional purpose under the technology. The system is a
+**feeling-transmitter**: the shortest path from one person's inner state to
+another person's chest. The body is the verb, the face is the feeling, the sound
+is the spell. Success is not "a foot-stamp triggered a boom" — it is that
+someone watching the playback *feels the anger in it*. Every taste decision
+(especially the mapping curves) serves that bar. It is also why the eventual
+multiplayer game room is the real dream: feeling alone isn't godlike;
+*transmitting* it to others is.
+
 ## Vision
 
 A person performs with their whole body in front of a camera. Their physical
@@ -13,7 +27,9 @@ colors the sound — an angry face makes it an *angry* boom. It turns interpreti
 dance into music.
 
 The body decides **what note and how loud**. The face decides **what it sounds
-like**. That separation is what makes "angry boom" expressible.
+like** — which is really *what the performer feels*. That separation is what
+makes "angry boom" expressible, and what lets feeling travel from body to sound
+to another person.
 
 ## Growth path (seed → redwood)
 
