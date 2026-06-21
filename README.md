@@ -10,7 +10,7 @@ makes it an *angry* boom).
 > person's inner state to another's chest. The body is the verb, the face is the
 > feeling, the sound is the spell.
 
-**Live demo:** https://cloudcodetree.github.io/motion-expression/
+**Live demo:** https://cloudcodetree.com/motion-expression/
 (Chrome recommended; it asks for camera access and runs entirely in your browser
 — no video ever leaves your device.)
 
