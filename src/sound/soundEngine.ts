@@ -7,6 +7,9 @@ export class SoundEngine {
   private boom: Tone.MembraneSynth;
   private hit: Tone.MetalSynth;
 
+  /** Called (synced to playback) each time an event sounds — for diagnostics. */
+  onTrigger?: (e: MusicalEvent) => void;
+
   constructor() {
     this.distortion = new Tone.Distortion(0).toDestination();
     this.filter = new Tone.Filter(2000, 'lowpass').connect(this.distortion);
@@ -17,6 +20,19 @@ export class SoundEngine {
   /** Must be called from a user gesture before any sound plays. */
   async resume(): Promise<void> {
     await Tone.start();
+  }
+
+  /** Current AudioContext state: 'running' | 'suspended' | 'closed'. */
+  audioState(): string {
+    return Tone.getContext().state;
+  }
+
+  /** Immediate, clean beep to confirm the audio path works, independent of detection. */
+  testBeep(): void {
+    this.distortion.distortion = 0;
+    this.filter.frequency.value = 4000;
+    this.boom.set({ detune: 0, envelope: { attack: 0.005 } });
+    this.boom.triggerAttackRelease('C2', '8n', Tone.now(), 0.9);
   }
 
   /** Schedule events (timestamps in ms) onto the transport. */
@@ -35,6 +51,8 @@ export class SoundEngine {
     const synth = e.instrument === 'boom' ? this.boom : this.hit;
     synth.set({ detune: e.character.detune, envelope: { attack: e.character.attack } });
     synth.triggerAttackRelease(note, '8n', time, e.velocity);
+    // Fire the diagnostic callback in visual sync with the sound.
+    Tone.getDraw().schedule(() => this.onTrigger?.(e), time);
   }
 
   /** Start the transport `offsetSec` into the timeline. */

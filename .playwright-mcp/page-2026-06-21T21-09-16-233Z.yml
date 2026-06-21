@@ -1,0 +1,6 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - button "● REC" [ref=e7] [cursor=pointer]
+    - button "▶ PLAY" [disabled] [ref=e8]
+    - button "↻ REDO" [disabled] [ref=e9]
+  - paragraph [ref=e10]: loading models…

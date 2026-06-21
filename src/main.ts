@@ -15,7 +15,10 @@ const ctx = canvas.getContext('2d')!;
 const recBtn = document.querySelector<HTMLButtonElement>('#rec')!;
 const playBtn = document.querySelector<HTMLButtonElement>('#play')!;
 const redoBtn = document.querySelector<HTMLButtonElement>('#redo')!;
+const testBtn = document.querySelector<HTMLButtonElement>('#test')!;
 const status = document.querySelector<HTMLParagraphElement>('#status')!;
+const flashEl = document.querySelector<HTMLDivElement>('#flash')!;
+const diagEl = document.querySelector<HTMLPreElement>('#diag')!;
 
 const capture = new Capture();
 const sensing = new Sensing();
@@ -25,6 +28,33 @@ let recording = false;
 let frames: SensedFrame[] = [];
 let recordStart = 0;
 let clipUrl: string | null = null;
+
+// --- diagnostics ---
+let eventCount = 0;
+let playedCount = 0;
+let lastEvent = '—';
+
+function renderDiag() {
+  diagEl.textContent =
+    `audio:   ${sound.audioState()}\n` +
+    `events:  ${eventCount} scheduled\n` +
+    `played:  ${playedCount}\n` +
+    `last:    ${lastEvent}`;
+}
+
+function flash() {
+  flashEl.classList.add('on');
+  setTimeout(() => flashEl.classList.remove('on'), 110);
+}
+
+sound.onTrigger = (e) => {
+  playedCount++;
+  lastEvent = `${e.instrument} pitch${e.pitch} vel${e.velocity.toFixed(2)} dist${e.character.distortion.toFixed(2)}`;
+  flash();
+  renderDiag();
+};
+
+setInterval(renderDiag, 500); // keep the audio-state line fresh
 
 async function boot() {
   await capture.init(video);
@@ -69,14 +99,22 @@ async function stopRecording() {
   const events = mapToMusic(timeline);
   sound.schedule(events);
 
-  status.textContent = `rendered ${events.length} sound events — press PLAY`;
+  eventCount = events.length;
+  playedCount = 0;
+  renderDiag();
+  status.textContent = events.length
+    ? `rendered ${events.length} sound events — press PLAY`
+    : `no impacts detected in ${frames.length} frames — try bigger/faster claps closer to the camera`;
   recBtn.textContent = '● REC';
   playBtn.disabled = false;
   redoBtn.disabled = false;
 }
 
-function play() {
+async function play() {
   if (!clipUrl) return;
+  await sound.resume(); // re-unlock audio on mobile (context may have suspended)
+  playedCount = 0;
+  renderDiag();
   // Switch the video element from the live camera to the recorded clip.
   video.srcObject = null;
   video.src = clipUrl;
@@ -89,6 +127,10 @@ function play() {
 
 function redo() {
   sound.stop();
+  eventCount = 0;
+  playedCount = 0;
+  lastEvent = '—';
+  renderDiag();
   if (clipUrl) { URL.revokeObjectURL(clipUrl); clipUrl = null; }
   video.removeAttribute('src');
   video.srcObject = capture.stream;
@@ -104,5 +146,12 @@ function redo() {
 recBtn.addEventListener('click', () => { recording ? stopRecording() : startRecording(); });
 playBtn.addEventListener('click', play);
 redoBtn.addEventListener('click', redo);
+testBtn.addEventListener('click', async () => {
+  await sound.resume();
+  sound.testBeep();
+  flash();
+  status.textContent = 'test beep fired — did you hear it?';
+  renderDiag();
+});
 
 boot().catch((err) => { status.textContent = `error: ${err.message}`; });
