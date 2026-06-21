@@ -1,6 +1,7 @@
 import type { SensedFrame, ImpactEvent, BodyPart } from '../types';
 
 const TRACKED: { part: BodyPart; index: number }[] = [
+  { part: 'head', index: 0 }, // nose — the one point always in frame on a phone selfie
   { part: 'leftHand', index: 15 },
   { part: 'rightHand', index: 16 },
   { part: 'leftFoot', index: 27 },
@@ -15,7 +16,7 @@ export function detectImpacts(
   frames: SensedFrame[],
   opts: { speedThreshold?: number; decelRatio?: number } = {},
 ): TaggedImpact[] {
-  const speedThreshold = opts.speedThreshold ?? 0.04;
+  const speedThreshold = opts.speedThreshold ?? 0.025;
   const decelRatio = opts.decelRatio ?? 0.4;
   const result: TaggedImpact[] = [];
 

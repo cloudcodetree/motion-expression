@@ -7,7 +7,7 @@ export interface SensedFrame {
   faceBlendshapes: Blendshape[];// 52 expression coefficients
 }
 
-export type BodyPart = 'leftFoot' | 'rightFoot' | 'leftHand' | 'rightHand';
+export type BodyPart = 'head' | 'leftFoot' | 'rightFoot' | 'leftHand' | 'rightHand';
 
 export interface ImpactEvent {
   bodyPart: BodyPart;

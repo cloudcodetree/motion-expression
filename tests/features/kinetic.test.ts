@@ -27,6 +27,20 @@ describe('detectImpacts', () => {
     expect(impacts[0].impact.force).toBeGreaterThan(0.8);
   });
 
+  it('detects a head jab: nose moves fast then stops', () => {
+    // index 0 = nose. Always in frame on a phone selfie, so it's a reliable trigger.
+    const frames = [
+      frame(0,   { 0: { x: 0.5, y: 0.30 } }),
+      frame(33,  { 0: { x: 0.5, y: 0.36 } }), // speed 0.06
+      frame(66,  { 0: { x: 0.5, y: 0.44 } }), // speed 0.08 (peak)
+      frame(99,  { 0: { x: 0.5, y: 0.44 } }), // stop -> contact
+      frame(132, { 0: { x: 0.5, y: 0.44 } }),
+    ];
+    const impacts = detectImpacts(frames);
+    expect(impacts.length).toBe(1);
+    expect(impacts[0].impact.bodyPart).toBe('head');
+  });
+
   it('produces no impacts for a still body', () => {
     const frames = [frame(0), frame(33), frame(66), frame(99)];
     expect(detectImpacts(frames)).toEqual([]);

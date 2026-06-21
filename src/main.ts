@@ -5,7 +5,7 @@ import { blendshapesToEmotion } from './features/affective';
 import { mapToMusic } from './mapping/mapping';
 import { SoundEngine } from './sound/soundEngine';
 import { drawOverlay } from './ui/overlay';
-import type { SensedFrame } from './types';
+import type { SensedFrame, Landmark } from './types';
 
 const MAX_RECORD_MS = 20_000;
 
@@ -36,6 +36,37 @@ let lastEvent = '—';
 let senseErrors = 0;
 let lastError = '';
 
+// Live motion meter: per body part, the fastest motion seen this take and the
+// current tracking confidence. Reveals whether a part is even detected and how
+// fast it moves — the data we need to tune detection for phone framing.
+let prevLM: Landmark[] | null = null;
+const maxSpeed = { head: 0, hand: 0, foot: 0 };
+const curVis = { head: 0, hand: 0, foot: 0 };
+
+function updateMotion(sensed: SensedFrame) {
+  const lm = sensed.poseLandmarks;
+  if (prevLM && lm.length) {
+    const sp = (i: number) =>
+      prevLM![i] && lm[i] ? Math.hypot(lm[i].x - prevLM![i].x, lm[i].y - prevLM![i].y) : 0;
+    maxSpeed.head = Math.max(maxSpeed.head, sp(0));
+    maxSpeed.hand = Math.max(maxSpeed.hand, sp(15), sp(16));
+    maxSpeed.foot = Math.max(maxSpeed.foot, sp(27), sp(28));
+    const vis = (i: number) => lm[i]?.visibility ?? -1;
+    curVis.head = vis(0);
+    curVis.hand = Math.max(vis(15), vis(16));
+    curVis.foot = Math.max(vis(27), vis(28));
+  }
+  prevLM = lm.length ? lm : prevLM;
+}
+
+function resetMotion() {
+  prevLM = null;
+  maxSpeed.head = maxSpeed.hand = maxSpeed.foot = 0;
+}
+
+const f3 = (n: number) => n.toFixed(3);
+const f2 = (n: number) => n.toFixed(2);
+
 function renderDiag() {
   diagEl.textContent =
     `audio:   ${sound.audioState()}\n` +
@@ -43,7 +74,11 @@ function renderDiag() {
     `events:  ${eventCount} scheduled\n` +
     `played:  ${playedCount}\n` +
     `last:    ${lastEvent}\n` +
-    `errors:  ${senseErrors}${lastError ? ' — ' + lastError : ''}`;
+    `errors:  ${senseErrors}${lastError ? ' — ' + lastError : ''}\n` +
+    `motion (maxSpeed / trackConf):\n` +
+    `  head ${f3(maxSpeed.head)} / ${f2(curVis.head)}\n` +
+    `  hand ${f3(maxSpeed.hand)} / ${f2(curVis.hand)}\n` +
+    `  foot ${f3(maxSpeed.foot)} / ${f2(curVis.foot)}`;
 }
 
 function flash() {
@@ -73,6 +108,7 @@ function liveLoop() {
     try {
       const t = recording ? performance.now() - recordStart : performance.now();
       const sensed = sensing.sense(video, t);
+      updateMotion(sensed);
       drawOverlay(ctx, sensed, blendshapesToEmotion(sensed.faceBlendshapes));
       if (recording) {
         frames.push(sensed);
@@ -90,6 +126,7 @@ function liveLoop() {
 async function startRecording() {
   await sound.resume();
   frames = [];
+  resetMotion();
   recordStart = performance.now();
   recording = true;
   capture.startRecording();
