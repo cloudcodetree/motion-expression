@@ -10,6 +10,7 @@ const FACE_MODEL =
 export class Sensing {
   private pose!: PoseLandmarker;
   private face!: FaceLandmarker;
+  private lastTs = 0;
 
   async init(): Promise<void> {
     const vision = await FilesetResolver.forVisionTasks(WASM);
@@ -27,8 +28,14 @@ export class Sensing {
   }
 
   sense(video: HTMLVideoElement, t: number): SensedFrame {
-    const poseRes = this.pose.detectForVideo(video, t);
-    const faceRes = this.face.detectForVideo(video, t);
+    // MediaPipe requires monotonically increasing timestamps for the whole
+    // session. The logical frame time `t` resets to 0 when recording starts, so
+    // feeding it to MediaPipe would jump backwards and throw. Use an independent
+    // ever-increasing clock for inference; keep `t` only for the music timeline.
+    const ts = Math.max(Math.round(performance.now()), this.lastTs + 1);
+    this.lastTs = ts;
+    const poseRes = this.pose.detectForVideo(video, ts);
+    const faceRes = this.face.detectForVideo(video, ts);
 
     const poseLandmarks: Landmark[] = (poseRes.landmarks[0] ?? []).map((l) => ({
       x: l.x, y: l.y, z: l.z, visibility: l.visibility,

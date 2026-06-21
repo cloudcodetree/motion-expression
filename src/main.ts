@@ -33,13 +33,17 @@ let clipUrl: string | null = null;
 let eventCount = 0;
 let playedCount = 0;
 let lastEvent = '—';
+let senseErrors = 0;
+let lastError = '';
 
 function renderDiag() {
   diagEl.textContent =
     `audio:   ${sound.audioState()}\n` +
+    `frames:  ${frames.length} captured\n` +
     `events:  ${eventCount} scheduled\n` +
     `played:  ${playedCount}\n` +
-    `last:    ${lastEvent}`;
+    `last:    ${lastEvent}\n` +
+    `errors:  ${senseErrors}${lastError ? ' — ' + lastError : ''}`;
 }
 
 function flash() {
@@ -66,12 +70,18 @@ async function boot() {
 // Idle/record preview loop: draw skeleton + emotion; collect frames while recording.
 function liveLoop() {
   if (video.readyState >= 2 && !video.paused && video.srcObject) {
-    const t = recording ? performance.now() - recordStart : performance.now();
-    const sensed = sensing.sense(video, t);
-    drawOverlay(ctx, sensed, blendshapesToEmotion(sensed.faceBlendshapes));
-    if (recording) {
-      frames.push(sensed);
-      if (t >= MAX_RECORD_MS) stopRecording();
+    try {
+      const t = recording ? performance.now() - recordStart : performance.now();
+      const sensed = sensing.sense(video, t);
+      drawOverlay(ctx, sensed, blendshapesToEmotion(sensed.faceBlendshapes));
+      if (recording) {
+        frames.push(sensed);
+        if (t >= MAX_RECORD_MS) stopRecording();
+      }
+    } catch (err) {
+      // A single bad frame must not kill the loop — record it and keep going.
+      senseErrors++;
+      lastError = (err as Error).message;
     }
   }
   if (video.srcObject) requestAnimationFrame(liveLoop);
