@@ -1,6 +1,9 @@
 {
   "name": "motion-expression",
   "image": "mcr.microsoft.com/devcontainers/typescript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/sshd:1": {}
+  },
   "postCreateCommand": "npm install",
   "forwardPorts": [5173],
   "portsAttributes": {
