@@ -67,6 +67,19 @@ function resetMotion() {
 const f3 = (n: number) => n.toFixed(3);
 const f2 = (n: number) => n.toFixed(2);
 
+// Dev-only: ship the diagnostics text back to the dev server so on-device
+// (phone-over-tunnel) numbers show up in the dev console — no screenshots needed.
+function report(label: string) {
+  if (!import.meta.env.DEV) return;
+  try {
+    void fetch('/__log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: `${label}\n${diagEl.textContent ?? ''}`,
+    });
+  } catch { /* best-effort logging */ }
+}
+
 function renderDiag() {
   diagEl.textContent =
     `audio:   ${sound.audioState()}\n` +
@@ -155,6 +168,7 @@ async function stopRecording() {
   recBtn.textContent = '● REC';
   playBtn.disabled = false;
   redoBtn.disabled = false;
+  report('STOP');
 }
 
 async function play() {
@@ -199,6 +213,7 @@ testBtn.addEventListener('click', async () => {
   flash();
   status.textContent = 'test beep fired — did you hear it?';
   renderDiag();
+  report('TEST');
 });
 
 boot().catch((err) => { status.textContent = `error: ${err.message}`; });
