@@ -2,6 +2,10 @@
 import { defineConfig, type Plugin } from 'vite';
 import { appendFileSync } from 'node:fs';
 
+// Written inside node_modules so Vite's file watcher (which always ignores
+// node_modules) can never reload-loop on telemetry writes.
+const TELEMETRY_FILE = 'node_modules/.motion-telemetry.jsonl';
+
 // Dev-only structured telemetry sink. The app (incl. a phone over the tunnel)
 // POSTs JSON events to /__telemetry; we append each to .dev-telemetry.jsonl and
 // echo a one-line summary to the dev console. Persistent + queryable, and a
@@ -18,7 +22,7 @@ function devTelemetry(): Plugin {
         req.on('end', () => {
           try {
             const ev = JSON.parse(body);
-            appendFileSync('.dev-telemetry.jsonl', JSON.stringify(ev) + '\n');
+            appendFileSync(TELEMETRY_FILE, JSON.stringify(ev) + '\n');
             const extra = ev.summary ?? ev.error ?? '';
             console.log(`[tele] ${ev.sid ?? '?'} ${ev.type}${extra ? ' — ' + extra : ''}`);
           } catch {
