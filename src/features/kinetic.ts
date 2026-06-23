@@ -14,10 +14,10 @@ export interface TaggedImpact { frameIndex: number; impact: ImpactEvent; }
 
 export function detectImpacts(
   frames: SensedFrame[],
-  opts: { speedThreshold?: number; decelRatio?: number } = {},
+  opts: { speedThreshold?: number; refractoryFrames?: number } = {},
 ): TaggedImpact[] {
-  const speedThreshold = opts.speedThreshold ?? 0.025;
-  const decelRatio = opts.decelRatio ?? 0.4;
+  const speedThreshold = opts.speedThreshold ?? 0.015;
+  const refractoryFrames = opts.refractoryFrames ?? 4;
   const result: TaggedImpact[] = [];
 
   for (const { part, index } of TRACKED) {
@@ -25,26 +25,27 @@ export function detectImpacts(
     for (let i = 1; i < frames.length; i++) {
       const a = frames[i - 1].poseLandmarks[index];
       const b = frames[i].poseLandmarks[index];
-      if (!a || !b) { speeds.push(0); continue; }
-      speeds.push(Math.hypot(b.x - a.x, b.y - a.y));
+      speeds.push(a && b ? Math.hypot(b.x - a.x, b.y - a.y) : 0);
     }
-    for (let i = 2; i < frames.length; i++) {
-      // An impact is a frame where the limb was moving fast and then its speed
-      // suddenly collapses (contact). The collapse alone is the signal — a real
-      // slam may ease slightly before impact, so we do NOT require a strict
-      // monotonic rise into the peak (that was both wrong and float-fragile).
-      const peak = speeds[i - 1];
-      const collapsed = speeds[i] <= peak * decelRatio;
-      if (peak >= speedThreshold && collapsed) {
+    // An impact is a LOCAL MAXIMUM of speed above threshold — the moment the
+    // limb is moving fastest. MediaPipe smooths landmarks, so a real motion is a
+    // gentle bump that never "collapses" in one frame; peak-picking fires on the
+    // burst regardless of how gradually it decays. A refractory gap stops a
+    // single gesture from registering several times.
+    let lastImpact = -Infinity;
+    for (let i = 1; i < frames.length - 1; i++) {
+      const isPeak = speeds[i] >= speeds[i - 1] && speeds[i] > speeds[i + 1];
+      if (isPeak && speeds[i] >= speedThreshold && i - lastImpact >= refractoryFrames) {
         const lm = frames[i].poseLandmarks[index];
         result.push({
           frameIndex: i,
           impact: {
             bodyPart: part,
             position: { x: lm.x, y: lm.y },
-            force: Math.min(1, peak / HARD_HIT_SPEED),
+            force: Math.min(1, speeds[i] / HARD_HIT_SPEED),
           },
         });
+        lastImpact = i;
       }
     }
   }

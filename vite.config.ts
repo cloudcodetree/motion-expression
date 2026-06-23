@@ -6,6 +6,8 @@ import { defineConfig } from 'vite';
 // bind to 0.0.0.0 so the forwarded port URL resolves without a sub-path.
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/motion-expression/' : '/',
-  server: { host: true },
+  // host:true binds 0.0.0.0; allowedHosts:true lets a Cloudflare/ngrok tunnel
+  // domain reach the dev server (Vite blocks unknown hosts otherwise). Dev only.
+  server: { host: true, allowedHosts: true },
   test: { globals: true, environment: 'node' },
 }));

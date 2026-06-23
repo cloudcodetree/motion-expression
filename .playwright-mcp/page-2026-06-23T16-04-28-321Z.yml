@@ -1,0 +1,8 @@
+- generic [ref=e2]:
+  - generic [ref=e6]:
+    - button "● REC" [ref=e7] [cursor=pointer]
+    - button "▶ PLAY" [disabled] [ref=e8]
+    - button "↻ REDO" [disabled] [ref=e9]
+    - button "🔊 Test" [ref=e10] [cursor=pointer]
+  - paragraph [ref=e11]: "error: Requested device not found"
+  - generic [ref=e12]: diagnostics will appear here

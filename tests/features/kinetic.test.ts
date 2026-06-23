@@ -11,20 +11,29 @@ function frame(t: number, overrides: Record<number, { x: number; y: number }> = 
 
 describe('detectImpacts', () => {
   it('detects a foot slam: fast downward motion then a sudden stop', () => {
-    // index 27 = left ankle. y grows = moving down the screen.
+    // index 27 = left ankle. y grows = moving down the screen. One clear speed peak.
     const frames = [
       frame(0,   { 27: { x: 0.5, y: 0.20 } }),
       frame(33,  { 27: { x: 0.5, y: 0.30 } }), // speed 0.10
-      frame(66,  { 27: { x: 0.5, y: 0.45 } }), // speed 0.15
-      frame(99,  { 27: { x: 0.5, y: 0.60 } }), // speed 0.15 (peak)
-      frame(132, { 27: { x: 0.5, y: 0.60 } }), // speed 0.00 -> contact
-      frame(165, { 27: { x: 0.5, y: 0.60 } }),
+      frame(66,  { 27: { x: 0.5, y: 0.50 } }), // speed 0.20 (peak)
+      frame(99,  { 27: { x: 0.5, y: 0.58 } }), // speed 0.08
+      frame(132, { 27: { x: 0.5, y: 0.58 } }), // speed 0.00
     ];
     const impacts = detectImpacts(frames);
     expect(impacts.length).toBe(1);
     expect(impacts[0].impact.bodyPart).toBe('leftFoot');
-    expect(impacts[0].frameIndex).toBe(4);
+    expect(impacts[0].frameIndex).toBe(2); // the peak frame
     expect(impacts[0].impact.force).toBeGreaterThan(0.8);
+  });
+
+  it('detects a smooth motion bump with NO sharp stop (smoothed landmarks)', () => {
+    // Gradual rise and gradual fall — like MediaPipe's temporally smoothed output.
+    // index 16 = right wrist.
+    const ys = [0.20, 0.25, 0.32, 0.40, 0.45, 0.47, 0.47];
+    const frames = ys.map((y, i) => frame(i * 33, { 16: { x: 0.5, y } }));
+    const impacts = detectImpacts(frames);
+    expect(impacts.length).toBe(1);
+    expect(impacts[0].impact.bodyPart).toBe('rightHand');
   });
 
   it('detects a head jab: nose moves fast then stops', () => {

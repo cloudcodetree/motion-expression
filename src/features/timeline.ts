@@ -14,7 +14,7 @@ export function movingAverageEmotion(series: EmotionState[], window: number): Em
 
 export function buildFeatureTimeline(
   frames: SensedFrame[],
-  opts: { emotionWindow?: number; kinetic?: { speedThreshold?: number; decelRatio?: number } } = {},
+  opts: { emotionWindow?: number; kinetic?: { speedThreshold?: number; refractoryFrames?: number } } = {},
 ): FeatureFrame[] {
   const tagged = detectImpacts(frames, opts.kinetic);
   const impactsByFrame = new Map<number, ImpactEvent[]>();
