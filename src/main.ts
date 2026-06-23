@@ -5,6 +5,7 @@ import { blendshapesToEmotion } from './features/affective';
 import { mapToMusic } from './mapping/mapping';
 import { SoundEngine } from './sound/soundEngine';
 import { drawOverlay } from './ui/overlay';
+import { track } from './telemetry';
 import type { SensedFrame, Landmark } from './types';
 
 const MAX_RECORD_MS = 20_000;
@@ -67,21 +68,9 @@ function resetMotion() {
 const f3 = (n: number) => n.toFixed(3);
 const f2 = (n: number) => n.toFixed(2);
 
-// Dev-only: ship the diagnostics text back to the dev server so on-device
-// (phone-over-tunnel) numbers show up in the dev console — no screenshots needed.
-function report(label: string) {
-  if (!import.meta.env.DEV) return;
-  try {
-    void fetch('/__log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: `${label}\n${diagEl.textContent ?? ''}`,
-    });
-  } catch { /* best-effort logging */ }
-}
-
 function renderDiag() {
   diagEl.textContent =
+    `models:  ${sensing.isReady() ? 'ready' : 'loading…'}\n` +
     `audio:   ${sound.audioState()}\n` +
     `frames:  ${frames.length} captured\n` +
     `events:  ${eventCount} scheduled\n` +
@@ -109,10 +98,29 @@ sound.onTrigger = (e) => {
 setInterval(renderDiag, 500); // keep the audio-state line fresh
 
 async function boot() {
-  await capture.init(video);
-  await sensing.init();
-  status.textContent = 'ready — press REC and move';
+  track('boot.start', { ua: navigator.userAgent });
+  try {
+    await capture.init(video);
+    track('boot.camera_ok');
+  } catch (err) {
+    const msg = (err as Error).message;
+    status.textContent = `camera error: ${msg}`;
+    track('boot.camera_fail', { error: msg, summary: msg });
+    return;
+  }
+  // Start the preview loop now — sense() is a guarded no-op until models load,
+  // so the loop is safe and the camera preview is responsive immediately.
   requestAnimationFrame(liveLoop);
+  status.textContent = 'loading models…';
+  try {
+    await sensing.init();
+    track('boot.models_ok');
+    status.textContent = 'ready — press REC and move';
+  } catch (err) {
+    const msg = (err as Error).message;
+    status.textContent = `model load failed: ${msg}`;
+    track('boot.models_fail', { error: msg, summary: msg });
+  }
 }
 
 // Idle/record preview loop: draw skeleton + emotion; collect frames while recording.
@@ -168,7 +176,18 @@ async function stopRecording() {
   recBtn.textContent = '● REC';
   playBtn.disabled = false;
   redoBtn.disabled = false;
-  report('STOP');
+  track('record.stop', {
+    summary: `frames=${frames.length} events=${events.length} senseErrors=${senseErrors}`,
+    frames: frames.length,
+    events: events.length,
+    senseErrors,
+    lastError,
+    modelsReady: sensing.isReady(),
+    audio: sound.audioState(),
+    maxSpeed: { ...maxSpeed },
+    trackConf: { ...curVis },
+    instruments: events.map((e) => e.instrument),
+  });
 }
 
 async function play() {
@@ -213,7 +232,7 @@ testBtn.addEventListener('click', async () => {
   flash();
   status.textContent = 'test beep fired — did you hear it?';
   renderDiag();
-  report('TEST');
+  track('test', { summary: `audio=${sound.audioState()}`, audio: sound.audioState() });
 });
 
-boot().catch((err) => { status.textContent = `error: ${err.message}`; });
+boot();

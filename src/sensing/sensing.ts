@@ -27,7 +27,17 @@ export class Sensing {
     });
   }
 
+  /** True once both landmarkers are loaded and sense() will actually run inference. */
+  isReady(): boolean {
+    return !!this.pose && !!this.face;
+  }
+
   sense(video: HTMLVideoElement, t: number): SensedFrame {
+    // Models may not be loaded yet (or failed to load) — return an empty frame
+    // instead of throwing, so the render loop doesn't spin on errors.
+    if (!this.pose || !this.face) {
+      return { t, poseLandmarks: [], faceBlendshapes: [] };
+    }
     // MediaPipe requires monotonically increasing timestamps for the whole
     // session. The logical frame time `t` resets to 0 when recording starts, so
     // feeding it to MediaPipe would jump backwards and throw. Use an independent
